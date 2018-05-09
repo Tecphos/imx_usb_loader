@@ -19,17 +19,17 @@ endif
 CONFCPPFLAGS = -DSYSCONFDIR='"$(sysconfdir)"'
 CFLAGS ?= -Wall -Wstrict-prototypes -Wno-trigraphs
 
-imx_usb.o : imx_usb.c imx_sdp.h portable.h
+imx_usb.o : imx_usb.c imx_sdp.h imx_loader_config.h portable.h
 	$(CC) -c $*.c -o $@ -pipe -ggdb $(USBCFLAGS) $(CFLAGS) $(CONFCPPFLAGS)
 
-%.o : %.c imx_sdp.h portable.h image.h
+%.o : %.c imx_sdp.h imx_loader_config.h portable.h image.h
 	$(CC) -c $*.c -o $@ -pipe -ggdb $(CFLAGS) $(CONFCPPFLAGS)
 
-imx_usb: imx_usb.o imx_sdp.o
-	$(CC) -o $@ $@.o imx_sdp.o $(LDFLAGS) $(USBLDFLAGS)
+imx_usb: imx_usb.o imx_sdp.o imx_sdp_simulation.o imx_loader_config.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(USBLDFLAGS)
 
-imx_uart: imx_uart.o imx_sdp.o
-	$(CC) -o $@ $@.o imx_sdp.o $(LDFLAGS)
+imx_uart: imx_uart.o imx_sdp.o imx_loader_config.o
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 install: imx_usb imx_uart
 	mkdir -p '$(DESTDIR)$(sysconfdir)/imx-loader.d/'
@@ -44,6 +44,13 @@ uninstall:
 	rm -rf '$(DESTDIR)$(bindir)/imx_uart'
 
 clean:
-	rm -f imx_usb imx_uart imx_usb.o imx_uart.o imx_sdp.o
+	rm -f imx_usb imx_uart imx_usb.o imx_uart.o imx_sdp.o \
+		imx_sdp_simulation.o imx_loader_config.o
 
-.PHONY: all clean install
+tests: imx_usb
+	$(MAKE) -C tests/ tests
+
+regen: imx_usb
+	$(MAKE) -C tests/ regen
+
+.PHONY: all clean install tests
